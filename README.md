@@ -11,25 +11,24 @@ Bài cá nhân **4 giờ**: hoàn thiện một track 3D dài trên CVAT, tự Q
 
 ## Bắt đầu
 
-1. Bấm **Use this template** để tạo repo của bạn, rồi clone về máy.
-   - **Windows:** mở **Ubuntu (WSL)** từ Start menu và clone trong đó (`cd ~` rồi `git clone ...`). Mọi lệnh trong repo này chạy trong cửa sổ Ubuntu, không chạy trong PowerShell, CMD hay Git Bash.
-   - **macOS/Linux:** dùng Terminal bình thường.
+1. Bấm **Use this template** để tạo repo của bạn, rồi clone về máy (Windows: PowerShell hoặc GitHub Desktop đều được).
 2. Bật lại CVAT local đã cài ở Day 2 (`docker compose start` trong thư mục CVAT; Windows: mở Docker Desktop, start nhóm container CVAT). Không cần cài CVAT mới.
-3. Nhận gói dữ liệu `day14-coach-data-pack.zip` từ Lab Coach, giải nén ở thư mục gốc repo:
+3. Nhận gói dữ liệu `day14-coach-data-pack.zip` từ Lab Coach, giải nén **ở thư mục gốc repo** để có thư mục `private/`:
 
    ```bash
    unzip ~/Downloads/day14-coach-data-pack.zip
    ```
 
-   Windows (trong Ubuntu), file tải về nằm ở ổ C: `unzip /mnt/c/Users/<tên-user-Windows>/Downloads/day14-coach-data-pack.zip`. Thiếu `unzip` thì `sudo apt install -y unzip`.
+   Windows PowerShell: `Expand-Archive $HOME\Downloads\day14-coach-data-pack.zip -DestinationPath .` (hoặc chuột phải file zip → Extract All, chọn thư mục repo).
 4. Mở job Day 14 Lab Coach giao và object mục tiêu. Đọc [bài lab](docs/lab.md) từ đầu.
-5. Bật overlay nếu muốn xem cuboid trên ảnh camera trước (Windows: chạy trong Ubuntu):
+5. Bật overlay nếu muốn xem cuboid trên ảnh camera trước. Chạy từ thư mục gốc repo:
 
-   ```bash
-   bash scripts/cvat-overlay/overlay.sh up
-   ```
+   | Máy | Lệnh |
+   | --- | --- |
+   | macOS / Linux | `python3 scripts/cvat-overlay/overlay.py up` |
+   | Windows (PowerShell, CMD) | `python scripts\cvat-overlay\overlay.py up` (máy chỉ có `py` thì gõ `py` thay `python`) |
 
-   Rồi tải lại tab CVAT bằng Ctrl+Shift+R (macOS: Cmd+Shift+R). Gặp lỗi, xem [cvat-overlay.md](docs/cvat-overlay.md), có mục riêng cho Windows và bảng lỗi hay gặp.
+   Rồi tải lại tab CVAT bằng Ctrl+Shift+R (macOS: Cmd+Shift+R). Không cần WSL hay bash. Gặp lỗi, xem [cvat-overlay.md](docs/cvat-overlay.md).
 
 ## Nộp bài
 

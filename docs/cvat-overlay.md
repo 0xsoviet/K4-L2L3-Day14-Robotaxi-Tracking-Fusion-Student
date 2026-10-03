@@ -5,52 +5,51 @@ Bật một plugin trong CVAT local đang chạy trên máy: khi mở job 3D c�
 ## Cần có
 
 - CVAT local đã cài ở Day 2 (v2.74.1) đang chạy, container giao diện tên `cvat_ui` (tên mặc định của compose CVAT). Thư mục compose nằm ở đâu cũng được.
-- `bash`, `docker`, `python3` (chỉ thư viện chuẩn) và `curl`. macOS/Ubuntu dùng cửa sổ lệnh thường; Windows làm theo mục [Windows](#windows-chạy-trong-ubuntu-wsl) bên dưới.
+- Docker (Docker Desktop trên Windows/macOS) và Python 3 (chỉ thư viện chuẩn, không cần `pip install`).
 - Clone repo này. Lệnh dưới chạy từ thư mục gốc repo.
 - Gói dữ liệu Lab Coach phát (`day14-coach-data-pack.zip`): giải nén ở thư mục gốc repo để có `private/calib-diagnostic.json` và `private/frame-maps/`. Thiếu gói này `up` báo lỗi không tìm thấy calibration.
 
-## Windows: chạy trong Ubuntu (WSL)
+## Windows
 
-Không chạy script trong PowerShell, CMD hay Git Bash: script cần `bash` và `python3` của Linux. Dùng lại Ubuntu (WSL) và Docker Desktop đã cài ở Day 2.
+Chạy thẳng trong **PowerShell** hoặc **CMD**, không cần WSL hay Git Bash.
 
-1. Mở Docker Desktop, đợi CVAT chạy (mở được `http://localhost:8080`). Trong Docker Desktop → Settings → Resources → WSL integration, bật cho Ubuntu.
-2. Mở **Ubuntu** từ Start menu (không phải PowerShell). Kiểm tra:
+1. Mở Docker Desktop, đợi CVAT chạy (mở được `http://localhost:8080`).
+2. Mở PowerShell, kiểm tra:
 
-   ```bash
-   docker ps --format '{{.Names}}' | grep cvat_ui
-   python3 --version
+   ```powershell
+   docker ps --format "{{.Names}}" | findstr cvat_ui
+   python --version
    ```
 
-   Dòng đầu phải in `cvat_ui`. Thiếu công cụ thì cài: `sudo apt update && sudo apt install -y git unzip curl python3`.
-3. Clone repo **trong Ubuntu**, ở thư mục nhà, rồi giải nén gói dữ liệu. File tải về trên Windows nằm ở `/mnt/c/Users/<tên-user-Windows>/Downloads/`:
+   Dòng đầu phải in `cvat_ui`. `python` báo không có thì thử `py --version`; vẫn không có thì cài Python 3 từ python.org (tick **Add python.exe to PATH**) hoặc `winget install Python.Python.3.12`, rồi mở lại PowerShell.
+3. Vào thư mục repo, giải nén gói dữ liệu, bật overlay:
 
-   ```bash
-   cd ~
-   git clone https://github.com/VinUni-AI20k/K4-L2L3-Day14-Robotaxi-Tracking-Fusion-Student.git
-   cd K4-L2L3-Day14-Robotaxi-Tracking-Fusion-Student
-   unzip /mnt/c/Users/<tên-user-Windows>/Downloads/day14-coach-data-pack.zip
-   bash scripts/cvat-overlay/overlay.sh up
+   ```powershell
+   cd <thư mục repo>
+   Expand-Archive $HOME\Downloads\day14-coach-data-pack.zip -DestinationPath .
+   python scripts\cvat-overlay\overlay.py up
    ```
 
-4. Tải lại tab CVAT trên trình duyệt Windows bằng Ctrl+Shift+R.
+4. Tải lại tab CVAT bằng Ctrl+Shift+R.
+
+Máy đã có Ubuntu (WSL) thì cũng có thể chạy bản bash trong Ubuntu như macOS/Linux; hai bản làm cùng một việc.
 
 Lỗi hay gặp trên Windows:
 
 | Thông báo | Cách xử lý |
 | --- | --- |
-| `$'\r': command not found` | Repo được clone bằng Git của Windows nên file có xuống dòng CRLF. Clone lại trong Ubuntu như bước 3. |
-| `docker not found` / `cannot reach Docker` | Docker Desktop chưa chạy hoặc chưa bật WSL integration cho Ubuntu (bước 1). |
-| `container cvat_ui is not running` | CVAT chưa bật: mở Docker Desktop, start nhóm container CVAT. |
-| `python3 not found` | `sudo apt install -y python3` |
-| Lỗi không tìm thấy `private/calib-diagnostic.json` | Chưa giải nén gói dữ liệu ở thư mục gốc repo. |
+| `python` mở Microsoft Store hoặc báo không có | Dùng `py`, hoặc cài Python 3 như bước 2. |
+| `docker not found` / `cannot reach Docker` | Docker Desktop chưa chạy; mở và đợi trạng thái Running. |
+| `container cvat_ui is not running` | CVAT chưa bật: trong Docker Desktop start nhóm container CVAT. |
+| Lỗi không tìm thấy `private\calib-diagnostic.json` | Chưa giải nén gói dữ liệu ở thư mục gốc repo (phải có thư mục `private` cạnh `README.md`). |
 
 ## Bật, kiểm, tắt
 
 ```bash
-bash scripts/cvat-overlay/overlay.sh up
+python3 scripts/cvat-overlay/overlay.py up
 ```
 
-Trên Linux, nếu máy phải gõ `sudo docker ...` mới chạy được CVAT, thêm `sudo` trước lệnh trên. Sau đó tải lại tab CVAT bằng Ctrl+Shift+R (macOS: Cmd+Shift+R). `up` in trạng thái cuối; kết quả đúng:
+Bản bash cũ vẫn dùng được: `bash scripts/cvat-overlay/overlay.sh up` (cùng `up`/`down`/`status`). Trên Linux, nếu máy phải gõ `sudo docker ...` mới chạy được CVAT, thêm `sudo` trước lệnh trên. Sau đó tải lại tab CVAT bằng Ctrl+Shift+R (macOS: Cmd+Shift+R). `up` in trạng thái cuối; kết quả đúng:
 
 ```text
 CVAT at http://localhost:8080: 2.74.1
@@ -60,7 +59,7 @@ overlay: on
   calibration: calib-diagnostic.json sha256 <12 ký tự>, <N> frames, cameras {'image_1': 'CAM_P_F'}
 ```
 
-`overlay.sh status` in lại các dòng này; `overlay.sh down` đưa `cvat_ui` về cấu hình nginx gốc và xoá file plugin. Chạy `up` nhiều lần không sao. Script không mount gì và không build lại image: nó chép plugin, config và `default.conf` sinh từ chính bản gốc của container vào `cvat_ui` đang chạy, chạy `nginx -t` rồi mới reload; nếu nginx từ chối, container giữ cấu hình gốc. Server, database và annotation không bị đụng.
+`overlay.py status` in lại các dòng này; `overlay.py down` đưa `cvat_ui` về cấu hình nginx gốc và xoá file plugin. Chạy `up` nhiều lần không sao. Script không mount gì và không build lại image: nó chép plugin, config và `default.conf` sinh từ chính bản gốc của container vào `cvat_ui` đang chạy, chạy `nginx -t` rồi mới reload; nếu nginx từ chối, container giữ cấu hình gốc. Server, database và annotation không bị đụng.
 
 Overlay còn sau `docker compose stop`/`start`. Nếu `cvat_ui` bị tạo lại (ví dụ `docker compose down` rồi `up -d`, hoặc đổi image), plugin mất; chạy lại `up`.
 
