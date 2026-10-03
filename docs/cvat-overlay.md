@@ -1,6 +1,6 @@
 # Overlay cuboid trên camera của CVAT local
 
-Bật một plugin trong CVAT local đang chạy trên máy: khi mở job 3D của bản ghi VinFast, panel camera `image_1` (`CAM_P_F`) hiện cuboid chiếu theo calibration ngay trong job, cập nhật theo từng lần chỉnh track (kể cả trước khi Save). Không cần export, chạy Python hay tạo task review riêng. Đây là cách xem nhanh khi làm bài; luồng review 2D offline do Coach chạy vẫn là bằng chứng có manifest.
+Bật một plugin trong CVAT local đang chạy trên máy: khi mở job 3D của bản ghi VinFast, panel camera `image_1` (`CAM_P_F`) hiện cuboid chiếu theo calibration ngay trong job, cập nhật theo từng lần chỉnh track (kể cả trước khi Save). Không cần export, chạy Python hay tạo task review riêng. Đây là công cụ đối chiếu khi làm bài; bằng chứng nộp là phiếu cá nhân và CSV QC (xem [bài lab](lab.md#nộp-bài)).
 
 ## Cần có
 

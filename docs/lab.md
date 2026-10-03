@@ -1,110 +1,86 @@
 ---
 day: "D14"
 title: "Lab 14 — Robotaxi B: giữ track 3D qua thời gian và đối chiếu Camera–LiDAR"
-description: "Khởi động bằng một job ngắn, hoàn thiện track lõi 66 frame, làm thêm job ngắn theo tốc độ, kiểm nội suy và giải thích discrepancy."
+description: "Hoàn thiện một track 3D 66 frame trên CVAT local, tự chạy QC temporal, đối chiếu overlay camera và làm thêm case ngắn theo tốc độ."
 outcomes:
   - "Giữ identity, class và kích thước của một vật rắn qua sequence; đặt thêm keyframe khi cần."
-  - "Kiểm tra năm nhóm lỗi temporal bằng sequence và bằng chứng trước/sau."
+  - "Tự chạy QC temporal trên bản export và xử lý từng cờ bằng evidence trước/sau."
   - "Phân biệt bất nhất do annotation, FOV, occlusion, sparse points và nghi lỗi calibration; ghi hành động có căn cứ."
 prerequisites:
   - "Đã fit cuboid bằng Top → Side → Front trong Lab 13."
-  - "Có tài khoản CVAT và job Robotaxi cùng guideline do Lab Coach giao."
-  - "Có quyền đọc repo calibration của lớp; Coach chuẩn bị môi trường phép chiếu trước buổi học."
+  - "CVAT local từ Day 2 chạy được trên máy; có Python 3."
+  - "Nhận hai file dữ liệu từ Lab Coach đầu buổi (xem README)."
 requiredTools:
-  - "CVAT của lớp và trình xem ảnh; Python dùng cho phần baseline hoặc demo của Coach."
-  - "Repo K4-L23-Day14-Calibration; báo cáo QC và overlay do Coach cung cấp từ bản đã Save."
+  - "CVAT local (v2.74.1) với overlay camera của repo này."
+  - "Python 3 để chạy `src/cvat3d_fusion.py qc`; repo K4-L23-Day14-Calibration cho phần baseline (làm thêm)."
 commonErrors:
   - "Box co theo frame thưa → quay lại kích thước đã xác lập ở frame có đủ evidence."
-  - "Chỉ xem keyframe → kiểm thêm toàn bộ frame nội suy của track được giao."
+  - "Chỉ xem keyframe → kiểm thêm toàn bộ frame nội suy của track."
   - "Overlay lệch nhiều object → kiểm cặp dữ liệu và phép chiếu trước khi sửa cuboid."
-requiresSubmission: false
+  - "Commit nhầm file export hoặc `private/` → chỉ commit `submission/`."
+requiresSubmission: true
 workMode: "individual"
 ---
 
 # Lab 14 — Robotaxi B: giữ track 3D qua thời gian và đối chiếu Camera–LiDAR
 
-**Thời lượng:** 4 giờ thực hành. **Hình thức:** cá nhân. **Nộp bài:** Save rồi chuyển job sang `completed` trên CVAT như Day 12. Coach thu annotation và review riêng. Với 3D, Coach giữ native annotation JSON từ API và bản `Datumaro 3D 1.0` đã kiểm mapping cho QC/overlay. VLearn dùng để đọc hướng dẫn; không nộp ZIP tại đây.
+**Thời lượng:** 4 giờ thực hành. **Hình thức:** cá nhân, trên CVAT local của máy bạn. **Nộp bài:** link repo GitHub lên VLearn; repo chỉ chứa phiếu cá nhân và CSV QC trong `submission/`, không chứa dữ liệu (mục [Nộp bài](#nộp-bài)).
 
-Bạn tiếp tục từ cuboid của Lab 13 đến một object đi qua nhiều frame. Bài hôm nay có một nhiệm vụ lõi: **hoàn thiện một track 3D dài, rồi chứng minh quyết định giữ, sửa hoặc escalate bằng QC và hình ảnh**. Bạn nhận một ngân hàng **20 job**, có object lõi và thứ tự case được giao ngẫu nhiên trong từng mức. Phần bắt buộc là job khởi động B01, track lõi J01 và bằng chứng của nó; sau đó phần lớn người làm thêm được 4–6 job ngắn, người nhanh làm tiếp. Không ai phải làm hết 20 job.
+Bạn tiếp tục từ cuboid của Lab 13 đến một object đi qua nhiều frame. Nhiệm vụ lõi: **hoàn thiện một track 3D dài, rồi chứng minh quyết định giữ, sửa hoặc báo lại bằng QC và hình ảnh**. Phần bắt buộc là B01 (khởi động), track lõi J01 và bằng chứng của nó; sau đó làm thêm các case ngắn trong [danh sách](cases.md) theo tốc độ. Không ai phải làm hết.
 
-Mở [repo calibration Day 14](https://github.com/VinUni-AI20k/K4-L23-Day14-Calibration/tree/main) trước khi tải hoặc chạy mã. Repo cung cấp ví dụ một point cloud và một ảnh camera trước. Sequence thực hành dùng mẫu VinFast `3D_Lidar_sample_data`: **66 frame liên tiếp, mỗi frame có 8 ảnh ngữ cảnh**. Coach đã đối chiếu byte: PCD và ảnh trước của repo chính là frame 0 và `image_1.jpg` trong mẫu này. Quan hệ ấy nối ví dụ phép chiếu với dữ liệu lớp; nó chưa chứng minh calibration đúng trên mọi frame.
+Sequence thực hành là mẫu VinFast `3D_Lidar_sample_data`: **66 frame liên tiếp (0–65), mỗi frame có 8 ảnh camera**, nằm trong `day14-vinfast-cvat-upload.zip`. Bạn tạo hai task từ file này theo README: `Day14 J01 <tên>` và `Day14 practice <tên>`. Số frame trong CVAT trùng số frame trong [danh sách object](cases.md).
+
+Lab Coach có mặt trong lớp để phát dữ liệu và hỗ trợ khi bạn kẹt. Không bước nào phải chờ Coach: bạn tự bật overlay, tự export, tự chạy QC.
 
 | Phút | Việc làm | Xong khi |
 |---|---|---|
-| 0–15 | Đăng nhập CVAT, mở danh sách job. Coach demo 10 phút trên màn chiếu theo [hướng dẫn bằng hình](huong-dan-hinh.md). | Mở được workspace 3D của B01 và J01 |
-| 15–35 | **Khởi động B01** (6 frame) theo mục "Làm một track từ đầu đến cuối" của hướng dẫn bằng hình. | B01 đã Save và completed |
-| 35–110 | **Track lõi J01** (66 frame). Mốc con: phút 55 có L/W/H tham chiếu; phút 85 có keyframe đầu, cuối và chỗ đổi hướng; phút 110 đã bấm `F` qua đủ 66 frame. | J01 đã Save; Coach thu bản độc lập |
-| 110–160 | **Job ngắn** theo slot, bỏ qua B01. Khoảng 8–10 phút/job; nhờ bạn cùng cặp xem một job. | Mỗi job Save và completed; thường được 4–6 job |
-| 160–185 | **Dừng mở job mới.** Coach chiếu baseline phép chiếu; bạn đọc QC và overlay của J01, ghi một ca bình thường và một ca khó. | Hai dòng discrepancy trong phiếu |
-| 185–210 | Review với bạn cùng cặp và Coach; quyết định sửa, giữ hay escalate. | Ít nhất một quyết định có evidence |
-| 210–230 | Rework J01 và job bị góp ý; Save, tải lại trang để kiểm. | Bản cuối đã Save |
-| 230–240 | Chuyển các job đã xong sang completed, báo Coach phần đã làm và ca còn mở. | Danh sách Jobs hiện completed |
+| 0–20 | Bật CVAT local, giải nén gói dữ liệu, tạo hai task, bật overlay (README). Coach demo 10 phút theo [hướng dẫn bằng hình](huong-dan-hinh.md). | Mở được job 3D của cả hai task, thấy cuboid trên `image_1` khi vẽ thử |
+| 20–35 | **Khởi động B01** trong task practice (frame 16–21). | B01 đã Save |
+| 35–110 | **Track lõi J01** trong task J01, object theo chữ số cuối mã học viên. Mốc con: phút 55 có L/W/H tham chiếu; phút 85 có keyframe đầu, cuối và chỗ đổi hướng; phút 110 đã bấm `F` qua đủ 66 frame. | J01 đã Save |
+| 110–125 | **QC lần đầu cho J01:** export, chạy QC, ghi cờ của track J01 vào phiếu. | Có `submission/qc-j01/` lần đầu và quyết định ban đầu cho từng cờ |
+| 125–165 | **Case ngắn** trong task practice theo thứ tự bảng. Khoảng 8–10 phút/case. | Thường được 4–6 case, đã Save |
+| 165–190 | **Dừng mở case mới.** Đối chiếu overlay của J01: một ca bình thường, một ca khó. | Hai dòng discrepancy trong phiếu |
+| 190–210 | Đổi màn hình với bạn cùng cặp, xem đoạn rủi ro của nhau; quyết định sửa hay giữ. | Ít nhất một quyết định có evidence |
+| 210–230 | Rework J01 và case bị góp ý; Save, tải lại trang để kiểm. | Bản cuối đã Save |
+| 230–240 | Export lần cuối cả hai task, chạy QC, commit `submission/`, push, nộp link. | Link repo đã nộp trên VLearn |
 
 Khi trễ mốc:
 
-- **J01 chưa xong ở phút 110:** vẫn Save ngay để Coach có bản độc lập, rồi làm tiếp J01 tối đa tới phút 130 và bỏ phần job ngắn. Phút 130 vẫn chưa xong thì Save, ghi frame cuối đã kiểm và gọi Coach.
-- **Một job ngắn quá 15 phút:** Save, ghi chỗ kẹt vào phiếu, sang job kế tiếp.
-- **Kẹt một thao tác quá 5 phút:** gọi Coach, đừng ngồi đoán.
+- **J01 chưa xong ở phút 110:** Save, làm tiếp J01 tới phút 130 và bỏ bớt case ngắn. Phút 130 vẫn chưa xong thì Save, ghi frame cuối đã kiểm vào phiếu rồi chuyển sang QC.
+- **Một case ngắn quá 15 phút:** Save, ghi chỗ kẹt vào phiếu, sang case kế tiếp.
+- **Kẹt một thao tác quá 5 phút:** giơ tay gọi Coach, đừng ngồi đoán.
 
-Tự chạy repo calibration (mục "Chạy phép chiếu mẫu") là phần làm thêm cho người đã xong sớm; mọi người vẫn xem baseline qua phần Coach chiếu ở phút 160.
+Tự chạy repo calibration (mục "Chạy phép chiếu mẫu") là phần làm thêm cho người xong sớm.
 
-## Chuẩn bị đúng job và ghi nguồn bằng chứng
+## Chuẩn bị đúng object
 
-**Đầu ra:** bạn biết object nào mình chịu trách nhiệm, sequence nào đang dùng và đâu là dữ liệu demo.
+**Đầu ra:** bạn biết object nào mình chịu trách nhiệm, task nào dùng cho việc gì.
 
-### Tôi sẽ làm trên dữ liệu nào?
+1. Làm xong các bước "Bắt đầu" trong README: hai task 66 frame, workspace Standard 3D, overlay báo `overlay: on`.
+2. Mở [danh sách object](cases.md). Chọn J01-a/b/c/d theo chữ số cuối mã học viên. Trong task J01, nhảy tới frame neo, tìm xe trong vùng ROI trên `image_1`, rồi tìm cụm điểm tương ứng trong perspective view.
+3. Mở `submission/personal-notes.txt`, ghi object J01 và frame neo. Bài yêu cầu một track trong task J01, không gán nhãn toàn cảnh.
 
-Lab Coach giao một job Robotaxi và một object mục tiêu có đoạn đủ điểm để xác lập kích thước, cùng đoạn khó hơn để kiểm tính ổn định. Bạn chịu trách nhiệm toàn đoạn của object đó. Xem object lân cận để kiểm identity hoặc lệch cả cảnh.
+Chưa quen workspace 3D thì mở [hướng dẫn bằng hình](huong-dan-hinh.md): tạo Track, fit trên Top/Side/Front, keyframe/outside/occluded và Save.
 
-Bạn dùng job cá nhân và tài khoản từ Day 12–13. Coach chỉ định object bằng ảnh/vị trí trong cảnh; annotation nguồn được giữ riêng. Mỗi job chứa sequence liên tục để bạn xem keyframe và frame nội suy; bộ của bạn có một job dài và các job ngắn.
+**Checkpoint:** tìm được object J01 ở frame neo và thấy cuboid thử chiếu lên `image_1`. Không thấy overlay thì xem [cvat-overlay.md](cvat-overlay.md) trước khi làm tiếp.
 
-Dữ liệu giữ dải xa để luyện quyết định khi điểm thưa. Demo trong `artifacts.zip` giúp đọc cảnh báo; đối chiếu cảm biến dùng ảnh thật VinFast.
+## Làm B01, J01 rồi case ngắn
 
-### Tôi bắt đầu trong CVAT thế nào?
+**Đầu ra:** track lõi hoàn chỉnh với evidence, cộng các case ngắn theo tốc độ, chất lượng từng case giữ nguyên chuẩn.
 
-1. Đăng nhập CVAT của lớp, mở job Day 14 được giao. Ghi task/job và phạm vi vào phiếu cá nhân.
-2. Tìm object mục tiêu theo ảnh/vị trí. Xem một frame đủ điểm và một đoạn khó. Bài yêu cầu một track, không gán nhãn toàn cảnh.
-3. Đọc mapping Coach cấp: job dài có index 0–65; job ngắn bắt đầu lại từ 0. Filename giữ timestamp gốc, nên index cục bộ khác frame nguồn. Ảnh `image_1` dùng cho camera trước theo correspondence ở frame nguồn 0.
-4. Mở phiếu ghi chú cho frame fit, L/W/H, keyframe, phát hiện temporal và discrepancy. Coach thu/review riêng; bạn không phải export hoặc nộp CSV lên VLearn.
+Chuẩn bắt buộc là **J01 và evidence của nó**: frame fit đa view, L/W/H có lý do, keyframe, quét nội suy, self-QC, đối chiếu một ca bình thường và một ca khó, quyết định sau review. Số case ngắn phản ánh lượng thực hành; nó không thay bằng chứng về J01.
 
-Chưa quen workspace 3D thì mở [hướng dẫn bằng hình](huong-dan-hinh.md): chỗ tạo Track, fit trên Top/Side/Front, đọc keyframe/outside/occluded và Save → completed.
+1. **B01 trong task practice.** Case khởi động 6 frame theo mục "Làm một track từ đầu đến cuối" của hướng dẫn bằng hình. Bắt đầu track ở frame 16, bật `outside` ở frame 22.
+2. **J01 trong task J01.** Chọn frame fit, hoàn thiện track trên toàn đoạn object có mặt trong 66 frame. Save thường xuyên.
+3. **Case ngắn trong task practice**, theo thứ tự bảng, bỏ qua B01. Mỗi case là một track mới chỉ trên khoảng frame ghi trong bảng; bật `outside` ngay sau frame cuối. Ghi case → track ID vào phiếu. B01–B03 là cùng chiếc xe với một số object J01; vì thế chúng nằm ở task riêng.
+4. **Self-check trước khi sang case kế.** Đúng object/class, geometry, keyframe/nội suy, ca khó. Save, tải lại trang kiểm.
+5. **Dừng mở case mới ở phút 165.** Ghi case đã xong và case đang dở vào phiếu.
 
-**Checkpoint:** tìm được object và frame fit, đọc được mapping PCD/ảnh/calibration. Nếu lỗi truy cập hoặc thiếu dữ liệu, báo Coach; không dùng demo thay evidence thật. Khi đầu vào đủ, chuyển sang đọc baseline phép chiếu.
+**Checkpoint:** chỉ ra được J01, case đang làm và một quyết định có evidence.
 
-## Làm theo bộ job ngẫu nhiên và chọn mức tiếp theo
+## Chạy phép chiếu mẫu và đọc giới hạn của calibration (làm thêm)
 
-**Đầu ra:** hoàn thành track lõi với evidence chung, rồi làm các lượt mở rộng phù hợp tốc độ và giữ chất lượng từng job.
-
-### Tôi nhận 20 job thì phải làm đủ 20 mới xong bài không?
-
-Bộ 20 job là ngân hàng thực hành đã được sắp theo mức. **Chuẩn chung bắt buộc là job track dài J01 và evidence của nó**: frame fit đa view, L/W/H có lý do, keyframe, quét nội suy, self-QC, đối chiếu một ca bình thường và một ca khó, cùng quyết định sau review. Học viên cần hỗ trợ vẫn làm đúng chuẩn ấy với checkpoint và demo thêm. Số job mở rộng phản ánh lượng thực hành bạn đã làm; nó không tự thay thế bằng chứng về track lõi hoặc biến thành thang điểm riêng.
-
-Một job ngắn là một đoạn **6, 8 hoặc 10 frame liên tiếp**, với một object mục tiêu. Job dài dùng 66 frame dữ liệu. Vì vậy “20 job” trong bài này không phải 20 sequence dài giống nhau. Bạn tập thêm thao tác và quyết định trên các object/đoạn khác, giữ thời gian cuối buổi cho fusion và rework. Khi đến mốc dừng mở job mới, hãy xử lý bài đã bắt đầu thay vì chạy tiếp để tăng số completed.
-
-### Vì sao giao ngẫu nhiên nhưng vẫn chia mức?
-
-Coach ngẫu nhiên object của job lõi và thứ tự các case trong mỗi mức, giữ cùng cơ cấu độ khó giữa các bộ. Các bạn có thể nhận thứ tự khác nhau, nên phải đọc đúng object và mapping của mình. Ngẫu nhiên không có nghĩa lấy bất kỳ job nào trong danh sách hoặc đổi guideline theo bộ. Một lần kết thúc job cũng không kết thúc identity thật của object ở dataset: ranh giới job ngắn chỉ là phạm vi thực hành đã giao.
-
-| Lượt | Thành phần bổ sung | Tổng job | Trọng tâm |
-|---|---|---|---|
-| 1 | J01 dài + 4 job cơ bản, 6 frame/job | 5 | Fit, track, kích thước và nội suy |
-| 2 | 2 job cơ bản + 3 job trung gian, 8 frame/job trung gian | 10 | Frame thưa/xa, heading, FOV và ảnh ngữ cảnh |
-| 3 | 3 trung gian + 2 chẩn đoán, 10 frame/job chẩn đoán | 15 | Identity, gap và quyết định giữ/sửa |
-| 4 | 1 trung gian + 4 chẩn đoán | 20 | So giả thuyết, giải thích ambiguity/escalation |
-
-### Tôi chuyển lượt bằng tín hiệu nào?
-
-1. **Làm B01 rồi J01.** B01 là job khởi động 6 frame để quen thao tác; hướng dẫn bằng hình chụp đúng job này nên nó không tính là bằng chứng fit độc lập. Sau đó làm J01. Đọc object được giao, chọn frame fit và hoàn thiện track trên toàn đoạn. Save bản độc lập trước phản hồi. Khi cần hỗ trợ, nhờ kiểm frame fit; đừng bỏ job lõi để lấy nhiều completed ngắn.
-2. **Làm các mini-job theo thứ tự bộ của mình.** Mỗi job vẫn tạo Track, giữ kích thước có evidence, dịch/xoay các mốc và xem toàn bộ frame ở giữa. Đọc local frame và source frame đúng mapping; không nối số ID qua hai job chỉ vì cùng filename nguồn.
-3. **Self-check trước khi completed.** Kiểm đúng object/class, geometry, ID/keyframe/nội suy và ca khó. Save, mở lại kiểm, ghi ca sửa/giữ/escalate rồi completed. Nhờ bạn cùng cặp xem một mini-job mỗi lượt; giữ quyết định của mình trước trao đổi.
-4. **Đi lượt kế khi bài hiện tại đã được xử lý.** Có lỗi xác minh thì rework; thiếu evidence thì ghi blocker/người nhận. Bạn không cần chờ Coach duyệt từng mini-job; Coach spot-check và review riêng. Nếu lỗi lặp lại, quay về checkpoint thay vì mở tiếp job khó.
-5. **Dừng mở job mới ở phút 160.** Ghi job đã bắt đầu, job đã completed và phần còn mở. Dành 80 phút cuối cho fusion, review, rework và Save/completed theo bảng giờ ở đầu bài. Job chưa bắt đầu trong ngân hàng không được ghi là đã làm hoặc tự coi là lỗi annotation.
-
-**Checkpoint:** bạn chỉ ra được J01, lượt đang làm, job đã lưu và một quyết định có evidence. Phần lớn người làm thêm được 4–6 job ngắn, người nhanh làm tiếp; người cần hỗ trợ có đường kiểm từng mốc; mọi người đều giữ chuẩn lõi. Coach ghi riêng khối lượng và chất lượng, không dùng số completed để suy ra annotation đúng. Báo Coach cả thời gian và blocker thực tế.
-
-## Chạy phép chiếu mẫu và đọc giới hạn của calibration
-
-**Đầu ra:** một ảnh LiDAR chiếu lên camera từ dữ liệu mẫu của repo và ghi chú về phạm vi mà ảnh này kiểm chứng.
+**Đầu ra:** một ảnh LiDAR chiếu lên camera từ dữ liệu mẫu của [repo calibration Day 14](https://github.com/VinUni-AI20k/K4-L23-Day14-Calibration/tree/main), và ghi chú về phạm vi mà ảnh này kiểm chứng. Repo có một PCD và một ảnh camera trước; chúng chính là frame 0 và `image_1.jpg` của sequence lớp.
 
 ### Tại sao chạy ví dụ trước khi sửa track?
 
@@ -120,7 +96,7 @@ Trong repo này, **intrinsic** nằm ở `data/calib/Intrinsics.txt`: kích thư
 
 ### Tôi cần quan sát gì trên ảnh baseline?
 
-1. Theo demo của Coach, hoặc từ terminal trong repo calibration đã tải qua link đầu bài, cài đúng dependency rồi chạy test của repo. Test kiểm các hàm trên dữ liệu nhỏ, giúp phát hiện lỗi môi trường hoặc logic đã được test; nó không xác nhận calibration của toàn bộ sequence thật.
+1. Clone repo calibration, cài dependency rồi chạy test. Test kiểm các hàm trên dữ liệu nhỏ; nó không xác nhận calibration của toàn bộ sequence thật.
 
    ```bash
    python -m pip install -r requirements.txt
@@ -146,11 +122,11 @@ Trong repo này, **intrinsic** nằm ở `data/calib/Intrinsics.txt`: kích thư
 
 Chưa. Ảnh baseline cho biết các đầu vào mẫu có thể được đọc và chiếu trong môi trường của bạn. Chấm màu xuất hiện trên mặt đường hoặc xe là evidence cần quan sát, nhưng một ảnh đẹp chưa đủ để xác nhận nguồn gốc tọa độ, đồng bộ cảm biến hoặc độ đúng trên frame khác. README cũng nêu rõ mức bù đó chưa được chứng minh từ bản vẽ lắp đặt và chỉ được fit cho camera trước.
 
-**Checkpoint:** mở được ảnh baseline do bạn chạy hoặc Coach cung cấp, ghi phiên bản repo và hiệu chỉnh đang dùng. Bạn cần phân biệt được “script chạy được” với “calibration đã được kiểm cho sequence của tôi”. Phần tiếp theo quay lại point cloud thật trong CVAT để xác lập track; ảnh mẫu của repo không quyết định kích thước track đó.
+**Checkpoint:** phân biệt được “script chạy được” với “calibration đã được kiểm cho sequence của tôi”. Ảnh mẫu của repo không quyết định kích thước track.
 
 ## Hoàn thiện một track từ frame có đủ evidence
 
-**Đầu ra:** một track cá nhân có kích thước tham chiếu, keyframe có lý do và kiểm tra trên toàn bộ đoạn được giao.
+**Đầu ra:** một track có kích thước tham chiếu, keyframe có lý do và đã kiểm trên toàn bộ đoạn.
 
 ### Vì sao không fit từ frame xa nhất?
 
@@ -166,25 +142,22 @@ Các số 4,19 × 2,04 × 1,82 m trong slide thuộc ví dụ track 94. Bạn kh
 
 Ở đoạn giữa hai keyframe, kiểm tâm, heading và L/W/H trên các frame nội suy. Hai mốc khác kích thước có thể tạo đoạn box co giãn; đừng giả định tool giữ kích thước thay mình. Cách làm của lab là xác lập một kích thước đáng tin, rồi ưu tiên dịch tâm và xoay heading ở các mốc tiếp theo. Khi object rẽ, thêm mốc để quỹ đạo nội suy theo được cụm điểm. Không xóa hàng loạt keyframe chỉ để giảm cảnh báo: các mốc ấy có thể đang giữ đúng đường đi hoặc thời điểm che khuất.
 
-Theo guideline Robotaxi được giao, `occluded` ghi trạng thái bị che; `outside` đánh dấu object đã ra khỏi phạm vi track/không còn cơ sở theo dõi theo rule. Một lần tạm ít điểm hoặc bị che chưa tự động là Exit. Khi không chắc có cùng object, ghi ca cần phân xử với Coach thay vì cố giữ ID bằng cách nối hai vật khác nhau.
+
+Theo guideline Robotaxi, `occluded` ghi trạng thái bị che; `outside` đánh dấu object đã ra khỏi phạm vi track. Một lần tạm ít điểm hoặc bị che chưa tự động là Exit. Khi không chắc có cùng object, ghi ca đó vào phiếu là "chưa đủ evidence" thay vì cố nối hai vật khác nhau.
 
 ### Tôi sẽ thao tác theo thứ tự nào?
 
-1. **Ghi quyết định ban đầu.** Bắt đầu với J01; áp dụng lại quy trình này cho mỗi mini-job. Quan sát object mục tiêu độc lập, ghi frame định dùng để fit và lý do trước khi xem cách sửa của bạn khác. Task bắt đầu trống; Coach giữ bản nguồn riêng. Sau lần dựng track đầu tiên, nhấn Save để Coach có thể thu bản trước review.
-2. **Xác lập cuboid tham chiếu trong CVAT.** Chọn frame đủ điểm, dùng Top → Side → Front và kiểm label. Nếu tạo mới, chọn `Draw new cuboid → Track`. Ghi L/W/H, heading và frame tham chiếu vào phiếu cá nhân; giữ một ảnh chụp có frame và ID hoặc chỉ trực tiếp cho Coach.
-3. **Mở rộng hoặc sửa track qua thời gian.** Dịch tâm và xoay heading theo evidence của từng đoạn. Đặt thêm keyframe tại chỗ đổi hướng, Enter/Exit hoặc nơi nội suy lệch. Bạn đang làm trên task Day 14 mới. Không lấy các shape rời của job Day 13 để mặc định chúng là cùng identity trong sequence này.
-4. **Kiểm đoạn thưa hoặc bị che.** Dùng kích thước tham chiếu khi evidence hỗ trợ giữ cùng vật rắn. Không tạo ID mới chỉ vì tạm mất điểm; cũng không nối hai object khi identity chưa chắc. Phân biệt `outside` với trạng thái occlusion theo guideline được giao, và ghi ca thiếu evidence để Lab Coach phân xử.
-5. **Lưu để review.** Duyệt hết đoạn được giao, gồm frame nội suy, rồi nhấn Save. Báo task/job và track cho Coach để thu snapshot trước phản hồi. Tiếp tục giữ trạng thái làm việc đến khi đã rework và kiểm bản cuối.
+1. **Ghi quyết định ban đầu.** Ghi frame định dùng để fit và lý do vào phiếu trước khi hỏi bạn khác.
+2. **Xác lập cuboid tham chiếu.** Chọn frame đủ điểm, dùng Top → Side → Front, kiểm label `vehicles`, tạo bằng `Draw new cuboid → Track`. Ghi L/W/H, heading và frame tham chiếu vào phiếu.
+3. **Mở rộng track qua thời gian.** Dịch tâm và xoay heading theo evidence. Đặt thêm keyframe tại chỗ đổi hướng, Enter/Exit hoặc nơi nội suy lệch; xem overlay trên `image_1` để kiểm đầu–đuôi.
+4. **Kiểm đoạn thưa hoặc bị che.** Giữ kích thước tham chiếu khi evidence hỗ trợ cùng vật rắn. Không tạo ID mới chỉ vì tạm mất điểm; không nối hai object khi identity chưa chắc.
+5. **Save.** Duyệt hết đoạn, gồm frame nội suy, rồi Save.
 
-### Khi nào track đủ để chuyển sang QC?
-
-Bạn có thể chỉ ra một object xuyên suốt đoạn, một kích thước tham chiếu và lý do cho các mốc quan trọng. Mỗi frame thưa cần được giải thích bằng evidence của track, thay vì một box nhỏ hơn. Với heading, hãy xem đầu–đuôi và hướng chuyển động qua nhiều frame; hướng chuyển động một mình không đủ giải mọi ca xe quay đầu hoặc đi lùi.
-
-**Checkpoint:** có track đã Save và frame tham chiếu truy vết được. Bạn đã xem mọi frame trong phạm vi track của mình, kể cả các frame do tool nội suy. Một đoạn identity còn mơ hồ phải được ghi lại, không bị giấu bằng việc merge hoặc đổi ID. QC tiếp theo sẽ giúp tìm nơi cần xem lại và kiểm xem bản export có giữ được hành vi vừa thấy trong UI hay không.
+**Checkpoint:** track đã Save, frame tham chiếu truy vết được, đã xem mọi frame trong phạm vi track kể cả frame nội suy. Đoạn identity còn mơ hồ được ghi lại trong phiếu.
 
 ## Self-QC temporal và review trước khi rework
 
-**Đầu ra:** đọc được QC trước/sau do Coach cung cấp, giữ một nhận xét review và cách xử lý phát hiện của track mình.
+**Đầu ra:** QC trước/sau do chính bạn chạy, cách xử lý từng cờ của track mình và một nhận xét review.
 
 ### Script chỉ ra lỗi hay chỉ ra nơi cần nhìn?
 
@@ -200,37 +173,43 @@ Trong lab, bạn xem identity trước/sau các ca xe sát nhau để tìm **ID 
 
 Một track không có cờ vẫn cần xem bằng mắt. Chẳng hạn, hai track có thể đổi object mà tâm box không nhảy quá xa. Sparsity cũng không có một cờ riêng tự chứng minh “đã xử lý đúng”. Review phải quay lại frame thực, chứ không dừng ở việc đọc CSV. Bạn giữ nhận xét ban đầu trước khi nhận phản hồi để thấy mình đã thay đổi quyết định ở đâu.
 
-### Tôi chạy và ghi QC thế nào?
+### Tôi export và chạy QC thế nào?
 
-1. Nhấn Save sau lần dựng track đầu tiên. Ghi task/job, track, phạm vi và mốc đã kiểm để Coach thu đúng revision. Coach export và chạy `cvat3d_fusion.py qc` riêng; bạn không phải tải source annotation.
-2. Đọc báo cáo hoặc các dòng cờ Coach cung cấp cho track của mình. Đối chiếu `track_id`, `n_frames`, `L_drift`, `W_drift`, `H_drift` với phạm vi đã làm. Nếu ID export khác ID CVAT, dùng mapping do Coach xác nhận, không ghép theo số gần giống.
-3. Tự xem frame được báo, cùng frame trước/sau và frame ngoài keyframe. Ghi quan sát ban đầu: object nào, thay đổi gì, evidence nào hỗ trợ giữ hoặc sửa. Chỉ nhận trách nhiệm cho object được giao; object lân cận hỗ trợ kiểm identity hoặc lệch cả cảnh.
-4. Nhờ một bạn xem một đoạn rủi ro sau self-QC. Bài vẫn nộp cá nhân. Trao đổi sau khi đã ghi quyết định ban đầu; giữ cả nhận xét của người review và lý do đồng ý/không đồng ý để Coach thu riêng.
-5. Sửa ca đã xác minh hoặc ghi lý do giữ/escalate. Nhấn Save khi annotation thay đổi; Coach thu bản sau và tạo lại QC từ cùng revision. Bạn kiểm các ca vừa sửa ngay trong CVAT, không chờ số cờ để quyết định thay mình.
+1. Save trong job. Ở trang task (**Tasks** → task của bạn), bấm **Actions** → **Export task dataset**. Format **Datumaro 3D 1.0**, **bỏ tick Save images**, đặt tên rồi **OK**. Tải file `.zip` về khi CVAT báo xong.
+2. Giải nén vào `outputs/` trong repo (đã gitignore), ví dụ `outputs/j01/` cho task J01 và `outputs/practice/` cho task practice. Mỗi lần export mới thì xoá thư mục cũ rồi giải nén lại.
+3. Chạy QC từ thư mục gốc repo (Windows: `python` thay `python3`):
+
+   ```bash
+   python3 src/cvat3d_fusion.py qc --annotations outputs/j01 --out submission/qc-j01
+   python3 src/cvat3d_fusion.py qc --annotations outputs/practice --out submission/qc-practice
+   ```
+
+   Mỗi thư mục có `qc_tracks.csv` (một dòng/track: số frame, keyframe, L/W/H, drift, bước nhảy heading/tâm, khoảng cách) và `qc_flags.csv` (một dòng/cờ: loại cờ, track, frame).
+4. Tìm dòng của track J01 trong `qc_tracks.csv`. Kiểm `n_frames` khớp đoạn bạn đã làm, `L_drift`/`W_drift`/`H_drift` gần 0. Với mỗi cờ trong `qc_flags.csv`, mở đúng frame trong CVAT, xem frame trước/sau, ghi vào phiếu: sửa, giữ vì hợp lệ, hay chưa đủ evidence.
+5. Đổi màn hình với bạn cùng cặp, nhờ xem một đoạn rủi ro. Ghi nhận xét của bạn ấy và lý do bạn đồng ý/không đồng ý.
+6. Sửa ca đã xác minh, Save, export lại và chạy lại QC. Bản cuối trong `submission/` là QC của lần export cuối.
+
+Trong task practice, `fragmentation_suspect` ở đầu/cuối case là do cách cắt case; ghi một dòng xác nhận trong phiếu là đủ.
 
 ### Nếu cờ vẫn còn thì có nộp được không?
 
-Điều cần có là một cách xử lý truy vết được. Cờ có thể được sửa, được giải thích là tình huống hợp lệ hoặc được escalate vì chưa đủ evidence. Bạn không đổi ngưỡng script để làm cờ biến mất. Nếu `qc_flags.csv` trống, Coach ghi rõ phạm vi đã chạy và không có cảnh báo; toolkit có thể tạo file rỗng không có header. Bạn vẫn cần giải thích đoạn khó đã tự xem.
+Được, nếu mỗi cờ có cách xử lý truy vết được: đã sửa, giải thích là tình huống hợp lệ, hoặc ghi chưa đủ evidence. Không sửa ngưỡng hay code QC để cờ biến mất. `qc_flags.csv` trống vẫn cần giải thích đoạn khó bạn đã tự xem.
 
-**Checkpoint:** từ báo cáo Coach cung cấp, bạn xác định đúng track và lần theo một phát hiện đến frame thực. Nhận xét của bạn khác giúp kiểm tính nhất quán, không tự biến nhãn thành đúng. Coach giữ QC trước/sau tương ứng với hai snapshot. Nếu bạn đã sửa sau báo cáo gần nhất, báo lại để Coach thu bản mới trước khi đối chiếu fusion.
+**Checkpoint:** lần theo được một cờ của J01 từ CSV đến frame thực trong CVAT, và ghi được quyết định.
 
 ## Đối chiếu Camera–LiDAR và ghi discrepancy có căn cứ
 
-**Đầu ra:** một tập overlay trên ảnh thật ứng với track, cùng quyết định sửa, giữ hoặc escalate cho các ca đã xem.
+**Đầu ra:** quan sát overlay trên ảnh thật cho track J01, với quyết định sửa, giữ hoặc báo lại cho các ca đã xem.
 
 ### Tôi có đang xem ảnh đúng frame không?
 
-Trước khi đọc hình chiếu, kiểm manifest của sequence thật. Tên frame trong CVAT, `items[].id` trong export và tên ảnh/PCD có thể khác nhau. Lab Coach cung cấp mapping rõ để bạn biết ảnh nào thuộc frame nào. Không chọn ảnh chỉ vì filename có cùng vài chữ số. Một ảnh nhầm thời điểm vẫn có thể có cùng chiếc xe và tạo overlay có vẻ gần đúng.
-
-Coach dùng runtime map chính xác để ghép annotation, ảnh và PCD; CLI overlay dừng nếu thiếu media, mapping mơ hồ hoặc kích thước ảnh sai. Bảng frame-map công khai giúp định vị case, không thay cho runtime map riêng có đường dẫn media. Bạn vẫn phải mở kết quả và kiểm lại ảnh gốc, local frame, camera cùng nguồn calibration trước khi nhận xét sự khớp; chạy được script không chứng minh calibration đúng.
+Overlay chỉ vẽ trên `image_1` khi tên point cloud của frame khớp bảng frame trong `private/frame-maps`; frame không khớp thì không vẽ. Góc dưới trái ghi bản calibration đang dùng. Nếu cả cảnh lệch đột ngột ở một frame, kiểm task có frame step 1 và đủ 66 frame trước khi nghĩ tới annotation.
 
 ### Tôi dùng calibration nào cho sequence thật?
 
-Coach chuẩn bị overlay từ PCD/ảnh thật và annotation đã lưu của bạn. Overlay của Coach **không** dùng nguyên chuỗi baseline của repo. PCD mẫu đã được tịnh tiến về gốc ego nhưng chưa xoay, nên profile chỉ giữ phần xoay yaw của `LIDAR_TOP`, bỏ tịnh tiến của nó và bỏ khoản bù của script; `CAM_P_F` dùng ego → camera gốc của repo. Coach đã kiểm chuỗi này trên 66 frame bằng ba cách độc lập (ICP giữa các PCD, khớp cạnh LiDAR–ảnh, so cuboid chiếu với box phát hiện): lệch còn khoảng 2 px trên ảnh camera trước. Script baseline của repo vẫn cộng khoản bù đó; bạn ghi lại điều đó như một khác biệt giữa hai công cụ, không sửa số để ảnh của mình khớp.
+Overlay **không** dùng nguyên chuỗi baseline của repo calibration. PCD mẫu đã được tịnh tiến về gốc ego nhưng chưa xoay, nên profile chỉ giữ phần xoay yaw của `LIDAR_TOP`, bỏ tịnh tiến của nó và bỏ khoản bù của script; `CAM_P_F` dùng ego → camera gốc của repo. Chuỗi này đã được kiểm trên 66 frame bằng ba cách độc lập (ICP giữa các PCD, khớp cạnh LiDAR–ảnh, so cuboid chiếu với box phát hiện): lệch còn khoảng 2 px trên ảnh camera trước. Script baseline của repo vẫn cộng khoản bù đó; đó là khác biệt giữa hai công cụ, không sửa số để ảnh khớp.
 
-Trường `pcd_frame` cho biết toolkit có đưa điểm/cuboid từ LiDAR sang ego hay không. Chọn `lidar` thì có bước ấy; chọn `ego` thì bỏ qua. Profile hiện tại để `lidar`, với `sensor2ego` chỉ chứa phần xoay nói trên. Học viên không tự đổi các số này để làm ảnh khớp.
-
-Toolkit của artifacts dùng pinhole Brown–Conrady với tối đa năm hệ số. Repo hỗ trợ thêm camera fisheye và các trường hợp pinhole khác. Trong lab, đọc overlay camera trước trên ảnh 1920 × 1536. Các ảnh ngữ cảnh khác giúp nhận diện vật; chưa dùng chúng với profile camera trước. Khi không rõ camera model, hệ tọa độ hoặc timing, giữ quan sát thật và ghi giới hạn của kết luận.
+Chỉ đọc overlay trên camera trước 1920 × 1536. Các ảnh camera khác giúp nhận diện vật, không có cuboid chiếu.
 
 ### Tôi phân loại một chỗ không khớp bằng cách nào?
 
@@ -238,35 +217,31 @@ Toolkit của artifacts dùng pinhole Brown–Conrady với tối đa năm hệ 
 
 Lệch cùng chiều trên nhiều object và nhiều frame là dấu hiệu cần điều tra pipeline, gồm calibration hoặc ghép dữ liệu. Đó chưa phải phép đo tự chứng minh calibration sai. Một box lệch riêng có thể là annotation, nhưng vẫn cần kiểm object, heading và cặp file. Bạn ghi điều quan sát được trước, giả thuyết sau; dùng `chưa đủ evidence` khi chưa phân biệt được các nguyên nhân.
 
-1. **Kiểm đầu vào thật.** Mở ảnh của frame tham chiếu và một frame khó của track; đối chiếu index CVAT, filename gốc, camera và resolution với mapping. Đọc ghi chú correction/hệ tọa độ của profile trước khi nhận xét sự lệch.
-2. **Đọc overlay bản đã Save.** Coach cấp ảnh overlay và các dòng `projection.csv` ứng với snapshot cá nhân. Kiểm task/job/track/revision; nếu bạn sửa sau thời điểm thu, báo để tạo lại ảnh. Không đọc overlay annotation nguồn như kết quả bài của mình.
-3. **Đối chiếu hình và bảng.** Xem frame dày, frame thưa và đoạn dễ nhầm identity. Các status `fully_visible`, `partial`, `out_of_fov` chỉ kiểm vị trí góc box trên ảnh, không là nhãn che khuất thực tế; xác nhận FOV bằng ảnh và geometry.
-4. **Ghi discrepancy trước khi sửa.** Trong phiếu cá nhân, ghi frame/camera/track, quan sát 2D, quan sát 3D, nguyên nhân nghi ngờ, evidence và hành động. Coach thu vào log riêng. Phân biệt annotation, FOV, occlusion, sparse points, nghi calibration/pipeline và chưa đủ evidence.
-5. **Thực hiện hành động có căn cứ.** Lỗi annotation thì sửa trong job 3D và Save; Coach tạo lại QC/overlay liên quan. Ca FOV, che khuất hoặc thưa điểm thì ghi lý do giữ nhãn theo guideline. Nghi lỗi hệ thống thì báo Coach cùng frame/evidence; không kéo cuboid khỏi point cloud hoặc chỉnh calibration để che lệch.
+1. **Chọn hai frame của J01:** một frame dày (ca bình thường) và một frame khó (thưa, xa, bị che hoặc rìa ảnh).
+2. **Quan sát overlay.** Cuboid chiếu có bao đúng xe trên ảnh không, đầu–đuôi có khớp không. Overlay dùng trạng thái nội suy của chính CVAT, nên dời box là ảnh cập nhật ngay.
+3. **Ghi discrepancy trước khi sửa.** Trong phiếu: frame, quan sát 2D, quan sát 3D, nguyên nhân nghi ngờ (annotation / FOV / occlusion / sparse / nghi calibration / chưa đủ evidence), hành động.
+4. **Hành động có căn cứ.** Lỗi annotation thì sửa trong job 3D và Save. Ca FOV, che khuất hoặc thưa điểm thì ghi lý do giữ nhãn. Nghi lỗi hệ thống (nhiều xe lệch cùng chiều) thì báo Coach kèm frame; không kéo cuboid khỏi point cloud hay sửa calibration để che lệch.
 
-### Tôi có cần tạo task 2D mới không?
+**Checkpoint:** người khác lần được từ ghi chú của bạn đến đúng frame và cuboid cho một ca bình thường và một ca khó.
 
-Bằng chứng tối thiểu là overlay thật và ghi chú truy vết được đến track/frame; Coach giữ CSV riêng. Bạn có thể xem ảnh bằng trình xem ảnh trên máy. Nếu Lab Coach đã tạo task 2D review, dùng Issue trên ảnh để nhận xét và ghi Issue ID vào log; đó là một bản sao phục vụ review, không phải nơi vẽ lại nhãn 3D. Bạn không cần tự tạo thêm task để hoàn thành bài.
+## Nộp bài
 
-**Checkpoint:** người review lần được ít nhất một ca bình thường và một ca khó từ ghi chú đến ảnh thật và cuboid. Nếu đầu vào thật thiếu, báo rõ blocker và phần đã làm cho Coach; evidence demo không được ghi là đã hoàn thành fusion thật. Cách ghi giới hạn này giúp Lab Coach phân biệt lỗi học viên với lỗi gói dữ liệu.
+**Đầu ra:** link repo GitHub trên VLearn; repo chứa `submission/` đã điền, không chứa dữ liệu.
 
-## Rework, Save và completed trên CVAT
+1. Kiểm lại J01 trong CVAT: đúng object/label, L/W/H có căn cứ, heading hợp lý, đã xem toàn bộ frame. Save, tải lại trang kiểm.
+2. Export lần cuối cả hai task và chạy lại QC như mục Self-QC, để `submission/qc-j01/` và `submission/qc-practice/` là bản cuối.
+3. Hoàn thiện `submission/personal-notes.txt`.
+4. Kiểm chỉ commit `submission/`:
 
-**Đầu ra:** annotation cuối đã lưu trong job cá nhân; Coach có thể thu và review cùng evidence của bạn.
+   ```bash
+   git status
+   git add submission
+   git commit -m "Day 14 submission"
+   git push
+   ```
 
-### Save và completed xác nhận điều gì?
+   `git status` không được liệt kê `private/`, `outputs/`, file `.zip` hay ảnh. Thấy chúng thì dừng lại hỏi Coach.
+5. Mở repo trên GitHub, kiểm có `submission/` và CSV. Dán link repo lên VLearn. Repo private thì thêm tài khoản GitHub Coach báo vào Collaborators.
+6. Hết buổi: xoá hai task trên CVAT local, thư mục `outputs/` và `private/`.
 
-**Save** lưu annotation đang làm lên CVAT. Trạng thái **completed** báo rằng bạn đã kết thúc lần làm bài và sẵn sàng để Coach thu. Hai thao tác có trách nhiệm khác nhau: chuyển trạng thái không thay thế kiểm rằng thay đổi đã được lưu. Completed cũng không phải điểm số hay kết luận annotation đúng; Coach vẫn xem identity, geometry, nội suy và cách xử lý ca khó.
-
-Coach thu bản trước/sau rework và phản hồi riêng. Giữ một quyết định sau review cùng frame/evidence và lý do; ca còn mở cần có người nhận escalation.
-
-### Tôi kết thúc bài thế nào?
-
-1. Kiểm lại track trong CVAT: đúng object/label, L/W/H có căn cứ, heading hợp lý và đã xem toàn bộ frame của đoạn. Xem lại một frame nội suy cùng một ca khó sau rework.
-2. Hoàn thiện ghi chú gồm task/job/track, phạm vi, frame tham chiếu, L/W/H, keyframe quan trọng, một quyết định sau review và discrepancy còn mở. Ghi thêm case/lượt, job đã bắt đầu và đã completed. Coach thu riêng; không nộp ZIP lên VLearn.
-3. Nhấn **Save** và chờ thao tác lưu hoàn tất. Tải lại job để xác nhận cuboid/keyframe mới nhất còn đúng. Nếu có lỗi lưu hoặc mất dữ liệu, báo Coach trước khi chuyển trạng thái.
-4. Chuyển từng job đã làm xong sang **completed** như Day 12. Kiểm trạng thái trong danh sách Jobs; báo bộ job, phần chưa xong và ca cần theo dõi cho Coach. Khi Coach yêu cầu rework, mở lại theo quyền được cấp, sửa, Save và completed lại.
-
-**Checkpoint cuối:** job hiển thị completed và mở lại giữ annotation cuối. Coach thu/review riêng. Nếu bị chặn bởi đầu vào/tool, báo phần đã làm và blocker trước khi đóng job. Mốc nộp theo thông báo lớp.
-
-Nếu cần hỗ trợ, nhờ kiểm checkpoint trên J01. Nếu còn thời gian trước phút 160, đi tiếp lượt ngẫu nhiên đã giao; ở mức cao, giải thích thêm một cờ có thể false positive hoặc một giả định phép chiếu.
+**Checkpoint cuối:** link đã nộp, repo trên GitHub có phiếu và CSV QC, không có dữ liệu VinFast.

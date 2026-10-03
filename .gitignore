@@ -15,3 +15,5 @@ outputs/
 *.csv.credentials
 *token*
 *credentials*
+# Bản export CVAT và thư mục giải nén không được commit; chỉ commit CSV QC trong submission/
+exports/

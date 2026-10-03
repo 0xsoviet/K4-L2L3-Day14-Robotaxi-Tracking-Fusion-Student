@@ -1,14 +1,14 @@
 # Hướng dẫn bằng hình: làm một track cuboid trên CVAT 3D
 
-Ảnh chụp trên CVAT local v2.74.1 (Day 2), workspace **Standard 3D**, overlay đang bật. Ví dụ là một job mẫu 6 frame do Coach dùng để demo; job của bạn có số frame và object khác. Ảnh camera và point cloud trong perspective view đã làm mờ, chỉ giữ cuboid đang đánh dấu và nét chiếu màu xanh của overlay. Dữ liệu thật Coach phát trong buổi học.
+Ảnh chụp trên CVAT local v2.74.1 (Day 2), workspace **Standard 3D**, overlay đang bật. Ví dụ là một job mẫu 6 frame do Coach dùng để demo; job của bạn có số frame và object khác. Ảnh camera và point cloud trong perspective view đã làm mờ, chỉ giữ cuboid đang đánh dấu và nét chiếu màu xanh của overlay. Dữ liệu thật Lab Coach phát đầu buổi; bạn tự tạo task theo README.
 
 Đọc file này cùng [bài lab](lab.md): ở đây chỉ chỉ chỗ bấm, còn lý do và tiêu chí nằm trong bài lab.
 
 ## Làm một track từ đầu đến cuối
 
-Ví dụ dưới đây dùng job 6 frame (0–5), locator "frame 5, ROI ở góc phải ảnh `image_1`". Job dài làm y hệt, chỉ thêm keyframe.
+Ví dụ dưới đây dùng job 6 frame (0–5), locator "frame 5, ROI ở góc phải ảnh `image_1`". Job dài làm y hệt, chỉ thêm keyframe. Với B01 trong task practice của bạn: frame neo 21, ROI trong [danh sách](cases.md), track bắt đầu ở frame 16 và bật `outside` ở frame 22.
 
-1. Mở job, gõ `5` vào ô frame ở thanh trên rồi Enter. Nhìn ô `image_1`, tìm xe nằm trong ROI Coach cho. Trong perspective view, cuộn chuột zoom tới cụm điểm của đúng xe đó và nhớ vị trí của nó.
+1. Mở job, gõ `5` vào ô frame ở thanh trên rồi Enter. Nhìn ô `image_1`, tìm xe nằm trong ROI ghi ở [danh sách](cases.md). Trong perspective view, cuộn chuột zoom tới cụm điểm của đúng xe đó và nhớ vị trí của nó.
 2. Lùi bằng `D` về **frame đầu tiên xe xuất hiện** (thường là frame 0). Track chỉ tồn tại từ frame tạo ra nó trở về sau, nên phải tạo ở frame đầu.
 3. Tạo track (mục 2): icon cuboid → label `vehicles` → **Track** → click vào giữa cụm điểm của xe. Fit sơ bộ cho hộp ôm cụm điểm.
 4. Bấm `F` tới frame xe có **nhiều điểm nhất** (thường là frame gần xe ego nhất). Click cuboid, fit kỹ trên ba view phụ (mục 3):
@@ -17,9 +17,9 @@ Ví dụ dưới đây dùng job 6 frame (0–5), locator "frame 5, ROI ở góc
 5. Xem ô `image_1`: nét xanh của overlay phải bao đúng xe. Lệch rõ thì quay lại Top/Side/Front sửa, không kéo trên ảnh.
 6. Mở **DETAILS** trên thẻ track, ghi L/W/H vào phiếu. Đây là kích thước tham chiếu cho cả track.
 7. Quay về frame đầu. Ở DETAILS, gõ đúng ba số L/W/H vừa ghi để hộp ở keyframe đầu cùng kích thước, rồi chỉ **kéo thân hộp** và **xoay chấm xanh lá** cho khớp xe.
-8. Bấm `F` qua từng frame tới cuối job. Hộp còn ôm xe thì để nguyên (sao rỗng). Lệch thì chỉ dịch/xoay, không kéo điểm đỏ; frame đó thành keyframe (sao đặc). Lỡ đổi kích thước thì gõ lại L/W/H trong DETAILS.
+8. Bấm `F` qua từng frame tới cuối đoạn. Hộp còn ôm xe thì để nguyên (sao rỗng). Lệch thì chỉ dịch/xoay, không kéo điểm đỏ; frame đó thành keyframe (sao đặc). Lỡ đổi kích thước thì gõ lại L/W/H trong DETAILS.
 9. Bấm **Save**, tải lại trang, kiểm hộp vẫn còn ở frame đầu, frame fit và frame cuối.
-10. Menu → Change job state → completed (mục 6).
+10. Hết bài thì export và chạy QC theo mục Self-QC của [bài lab](lab.md) (mục 6).
 
 Job dài 66 frame làm y hệt: keyframe ở frame đầu, frame cuối và mỗi chỗ xe đổi hướng hay đổi tốc độ rõ. Sau khi đặt keyframe vẫn bấm `F` qua **mọi** frame như bước 8.
 
@@ -42,7 +42,7 @@ Kẹt ở bước nào quá 5 phút, giơ tay gọi Coach.
 ![Draw popover](../images/huong-dan/02-draw-popover.png)
 
 1. Bấm icon cuboid ở thanh công cụ trái (số 1).
-2. Chọn đúng label Coach yêu cầu (số 2); xe ô tô là `vehicles`.
+2. Chọn đúng label (số 2); xe ô tô là `vehicles`.
 3. Bấm **Track** (số 3). **Shape** tạo cuboid rời từng frame, không có keyframe hay nội suy, nên không dùng cho bài này.
 4. Một cuboid đi theo con trỏ; click vào perspective view tại vị trí object để đặt nó. Sau đó bấm `N` để vẽ lại với cùng thiết lập.
 
@@ -96,12 +96,12 @@ Hai lỗi dễ gặp:
 - **Propagate (`Ctrl+B`) không kéo dài track.** Nó biến track thành các Shape rời từng frame. Muốn kéo dài thì sang frame mới và sửa cuboid để tạo keyframe.
 - **Hai keyframe khác L/W/H làm hộp co giãn ở giữa.** Giữ một kích thước tham chiếu; ở các keyframe sau chỉ dịch tâm và xoay heading, trừ khi evidence buộc phải đổi.
 
-## 6. Save rồi completed
+## 6. Save và export
 
-![Menu đổi trạng thái job](../images/huong-dan/06-menu-state.png)
+![Menu của job](../images/huong-dan/06-menu-state.png)
 
 1. Bấm **Save** (số 1) hoặc `Ctrl+S`. Đợi lưu xong, rồi tải lại trang và kiểm cuboid cùng keyframe vẫn còn.
-2. Mở **Menu**, chọn **Change job state** (số 2), rồi chọn **completed** (số 3).
-3. Báo Coach job đã completed và ca còn mở. Khi Coach yêu cầu rework: chuyển lại **in progress**, sửa, Save, rồi completed lại.
+2. Không cần đổi trạng thái job (số 2, 3). Bài nộp là CSV QC và phiếu trong repo, không phải trạng thái job.
+3. Để chạy QC: ra trang task, **Actions** → **Export task dataset** → **Datumaro 3D 1.0**, bỏ tick **Save images**. Giải nén vào `outputs/` rồi chạy lệnh trong mục Self-QC của [bài lab](lab.md).
 
 Đừng dùng **Remove annotations** trong Menu để "dọn" track. Thao tác này xóa luôn lịch sử Undo.

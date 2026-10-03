@@ -1,33 +1,36 @@
 # Day 14 — Robotaxi: Tracking & Camera–LiDAR Fusion
 
-Bài cá nhân **4 giờ**: hoàn thiện một track 3D dài trên CVAT, tự QC theo thời gian, rồi đối chiếu cuboid với ảnh camera trước để ghi discrepancy có căn cứ.
+Bài cá nhân **4 giờ** trên **CVAT local** của máy bạn (bản đã cài ở Day 2): hoàn thiện một track 3D dài, tự chạy QC theo thời gian, đối chiếu cuboid với ảnh camera trước để ghi discrepancy có căn cứ. Nộp bài bằng **link repo GitHub** của bạn.
 
 | Tài liệu | Đọc khi nào |
 | --- | --- |
-| [Bài lab](docs/lab.md) | Đầu buổi và trong suốt bài: các bước, checkpoint, cách kết thúc |
-| [Hướng dẫn bằng hình](docs/huong-dan-hinh.md) | Lần đầu mở job 3D: chỗ bấm để tạo track, fit cuboid, đọc keyframe/outside/occluded, Save → completed |
-| [Overlay camera trên CVAT local](docs/cvat-overlay.md) | Khi muốn xem cuboid chiếu lên ảnh `image_1` ngay trong job 3D |
-| [Phiếu cá nhân](docs/personal-notes.txt) | Ghi frame fit, L/W/H, keyframe, phát hiện temporal và discrepancy |
+| [Bài lab](docs/lab.md) | Đầu buổi và trong suốt bài: các bước, checkpoint, cách nộp |
+| [Object và đoạn frame](docs/cases.md) | Chọn object J01 và các case ngắn |
+| [Hướng dẫn bằng hình](docs/huong-dan-hinh.md) | Lần đầu mở job 3D: tạo track, fit cuboid, keyframe/outside/occluded, Save |
+| [Overlay camera trên CVAT local](docs/cvat-overlay.md) | Xem cuboid chiếu lên ảnh `image_1` ngay trong job 3D |
+| [Phiếu cá nhân](submission/personal-notes.txt) | Ghi frame fit, L/W/H, keyframe, phát hiện QC và discrepancy |
 
 ## Bắt đầu
 
-1. Bấm **Use this template** để tạo repo của bạn, rồi clone về máy (Windows: PowerShell hoặc GitHub Desktop đều được).
-2. Bật lại CVAT local đã cài ở Day 2 (`docker compose start` trong thư mục CVAT; Windows: mở Docker Desktop, start nhóm container CVAT). Không cần cài CVAT mới.
-3. Nhận gói dữ liệu `day14-coach-data-pack.zip` từ Lab Coach, giải nén **ở thư mục gốc repo** để có thư mục `private/`:
+1. Bấm **Use this template** để tạo repo của bạn, rồi clone về máy (Windows: PowerShell hoặc GitHub Desktop đều được). Cài thư viện Python: `python -m pip install -r requirements.txt` (macOS/Linux: `python3`).
+2. Bật CVAT local đã cài ở Day 2 (`docker compose start` trong thư mục CVAT; Windows: mở Docker Desktop, start nhóm container CVAT). Mở `http://localhost:8080` và đăng nhập tài khoản trên máy bạn.
+3. Lab Coach phát hai file. Đặt chúng ở thư mục gốc repo:
+   - `day14-coach-data-pack.zip`: calibration và bảng frame cho overlay. **Giải nén** ở thư mục gốc repo để có `private/calib-diagnostic.json` và `private/frame-maps/`.
 
-   ```bash
-   unzip ~/Downloads/day14-coach-data-pack.zip
-   ```
+     ```bash
+     unzip ~/Downloads/day14-coach-data-pack.zip
+     ```
 
-   Windows PowerShell: `Expand-Archive $HOME\Downloads\day14-coach-data-pack.zip -DestinationPath .` (hoặc chuột phải file zip → Extract All, chọn thư mục repo).
-4. Tạo task 3D trên CVAT local từ file `day14-vinfast-cvat-upload.zip` Lab Coach phát (66 frame, point cloud + 8 ảnh camera mỗi frame; **không giải nén**):
-   1. Mở `http://localhost:8080` → **Tasks** → **+** → **Create a new task**.
-   2. Name: `Day14 <tên bạn>`. Labels: **Add label** → `vehicles` (kiểu Cuboid hoặc Any) → **Continue**.
-   3. **Select files** → **My computer** → kéo file `day14-vinfast-cvat-upload.zip` vào. Để mặc định các mục khác (frame step 1).
-   4. **Submit & Open**, đợi task xử lý xong (vài phút), mở job. Workspace phải là **Standard 3D**, panel phải có ảnh `image_0`…`image_7`.
+     Windows PowerShell: `Expand-Archive $HOME\Downloads\day14-coach-data-pack.zip -DestinationPath .` (hoặc chuột phải → Extract All, chọn thư mục repo).
+   - `day14-vinfast-cvat-upload.zip` (~290 MB): point cloud và 8 ảnh camera của 66 frame. **Không giải nén**; chép nguyên file vào `private/`.
 
-   Rồi chọn object mục tiêu Lab Coach giao và đọc [bài lab](docs/lab.md) từ đầu.
-5. Bật overlay nếu muốn xem cuboid trên ảnh camera trước. Chạy từ thư mục gốc repo:
+   Thư mục `private/` đã gitignore, không bao giờ được commit.
+4. Tạo **hai task** từ cùng file `day14-vinfast-cvat-upload.zip`; lặp các bước dưới hai lần, tên `Day14 J01 <tên bạn>` và `Day14 practice <tên bạn>`:
+   1. **Tasks** → **+** → **Create a new task**.
+   2. Điền Name. Labels: **Add label** → `vehicles` → **Continue**.
+   3. **Select files** → **My computer** → kéo file `day14-vinfast-cvat-upload.zip` vào. Để mặc định các mục khác.
+   4. **Submit & Open**, đợi xử lý xong rồi mở job. Workspace phải là **Standard 3D**, có các ô ảnh `image_0`…`image_7` và đủ 66 frame (0–65).
+5. Bật overlay để xem cuboid trên ảnh camera trước. Chạy từ thư mục gốc repo:
 
    | Máy | Lệnh |
    | --- | --- |
@@ -35,13 +38,17 @@ Bài cá nhân **4 giờ**: hoàn thiện một track 3D dài trên CVAT, tự Q
    | Windows (PowerShell, CMD) | `python scripts\cvat-overlay\overlay.py up` (máy chỉ có `py` thì gõ `py` thay `python`) |
 
    Rồi tải lại tab CVAT bằng Ctrl+Shift+R (macOS: Cmd+Shift+R). Không cần WSL hay bash. Gặp lỗi, xem [cvat-overlay.md](docs/cvat-overlay.md).
+6. Chọn object J01 theo [danh sách](docs/cases.md) và đọc [bài lab](docs/lab.md) từ đầu.
 
 ## Nộp bài
 
-Annotation nộp bằng **Save → completed** trên CVAT. Coach thu bản trước/sau và review riêng; không nộp ZIP lên VLearn.
+Nộp **link repo GitHub** của bạn lên VLearn. Repo chỉ thêm thư mục `submission/` đã điền:
+
+- `submission/personal-notes.txt`: phiếu cá nhân.
+- `submission/qc-j01/` và `submission/qc-practice/`: `qc_tracks.csv`, `qc_flags.csv` do `src/cvat3d_fusion.py qc` sinh từ bản export cuối của từng task (cách chạy ở mục "Nộp bài" của [bài lab](docs/lab.md)).
+
+Hai file CSV chỉ chứa số liệu thống kê theo track (số frame, keyframe, L/W/H, drift, cờ), không chứa ảnh hay point cloud. **Không commit** file export `.zip`, thư mục export đã giải nén, ảnh chụp màn hình hay bất kỳ thứ gì trong `private/`. Repo để private thì thêm tài khoản GitHub Lab Coach báo vào Collaborators trước khi nộp link.
 
 ## Dữ liệu
 
-Dữ liệu Robotaxi VinFast chỉ dùng cho buổi lab, giữ bảo mật và không chia sẻ ra ngoài. Repo này không chứa PCD, ảnh gốc hay annotation (ảnh trong `images/huong-dan/` là ảnh giao diện, phần ảnh camera đã làm mờ); Lab Coach cấp dữ liệu theo kênh riêng. Không commit, đăng ảnh chụp màn hình hay đưa dữ liệu lên repo, VLearn, mạng xã hội hoặc dịch vụ AI bên ngoài.
-
-Dữ liệu buổi lab (calibration `calib-diagnostic.json` và thư mục `frame-maps/`) **không nằm trong repo**: Lab Coach phát riêng trong buổi học. Chép chúng vào thư mục `private/` ở gốc repo (đã gitignore), không commit, không chia sẻ ra ngoài lớp. Không sửa hai thứ này để ảnh khớp hơn.
+Dữ liệu Robotaxi VinFast chỉ dùng cho buổi lab, giữ bảo mật và không chia sẻ ra ngoài. Repo này không chứa PCD, ảnh gốc hay annotation (ảnh trong `images/huong-dan/` là ảnh giao diện, phần ảnh camera đã làm mờ). Hai file dữ liệu Lab Coach phát nằm trong `private/` (đã gitignore). Không commit, đăng ảnh chụp màn hình hay đưa dữ liệu lên repo, VLearn, mạng xã hội hoặc dịch vụ AI bên ngoài. Không sửa calibration hay frame-map để ảnh khớp hơn. Hết buổi lab, xoá hai task trên CVAT local và thư mục `private/`.
