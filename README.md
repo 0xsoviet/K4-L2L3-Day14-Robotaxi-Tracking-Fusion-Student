@@ -12,13 +12,24 @@ Bài cá nhân **4 giờ**: hoàn thiện một track 3D dài trên CVAT, tự Q
 ## Bắt đầu
 
 1. Bấm **Use this template** để tạo repo của bạn, rồi clone về máy.
-2. Bật lại CVAT local đã cài ở Day 2 (`docker compose start` trong thư mục CVAT). Không cần cài CVAT mới.
-3. Mở job Day 14 Lab Coach giao và object mục tiêu. Đọc [bài lab](docs/lab.md) từ đầu.
-4. Bật overlay nếu muốn xem cuboid trên ảnh camera trước:
+   - **Windows:** mở **Ubuntu (WSL)** từ Start menu và clone trong đó (`cd ~` rồi `git clone ...`). Mọi lệnh trong repo này chạy trong cửa sổ Ubuntu, không chạy trong PowerShell, CMD hay Git Bash.
+   - **macOS/Linux:** dùng Terminal bình thường.
+2. Bật lại CVAT local đã cài ở Day 2 (`docker compose start` trong thư mục CVAT; Windows: mở Docker Desktop, start nhóm container CVAT). Không cần cài CVAT mới.
+3. Nhận gói dữ liệu `day14-coach-data-pack.zip` từ Lab Coach, giải nén ở thư mục gốc repo:
+
+   ```bash
+   unzip ~/Downloads/day14-coach-data-pack.zip
+   ```
+
+   Windows (trong Ubuntu), file tải về nằm ở ổ C: `unzip /mnt/c/Users/<tên-user-Windows>/Downloads/day14-coach-data-pack.zip`. Thiếu `unzip` thì `sudo apt install -y unzip`.
+4. Mở job Day 14 Lab Coach giao và object mục tiêu. Đọc [bài lab](docs/lab.md) từ đầu.
+5. Bật overlay nếu muốn xem cuboid trên ảnh camera trước (Windows: chạy trong Ubuntu):
 
    ```bash
    bash scripts/cvat-overlay/overlay.sh up
    ```
+
+   Rồi tải lại tab CVAT bằng Ctrl+Shift+R (macOS: Cmd+Shift+R). Gặp lỗi, xem [cvat-overlay.md](docs/cvat-overlay.md), có mục riêng cho Windows và bảng lỗi hay gặp.
 
 ## Nộp bài
 
