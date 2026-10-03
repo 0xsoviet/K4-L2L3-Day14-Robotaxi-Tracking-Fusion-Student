@@ -1,35 +1,64 @@
 PHIẾU CÁ NHÂN — DAY 14
-Điền file này, chạy QC vào submission/qc-j01 và submission/qc-practice, commit rồi nộp link repo.
+Repo: phiếu này + submission/qc-j01/ (QC từ export cuối của task J01).
+Drive "2A202602177 - Đào Xuân Tùng": phiếu này + day14.zip (export Datumaro 3D 1.0, không lưu ảnh).
 Không dán ảnh, toạ độ điểm hay nội dung file export vào đây.
+Mục đánh dấu [XÁC NHẬN] là thông tin chỉ người làm bài biết, cần điền trước khi nộp.
 
-Họ tên / mã học viên:
-Object J01 (a/b/c/d theo docs/cases.md) / track ID trong task J01:
-Phiên bản CVAT / overlay đã bật (có/không):
+Họ tên / mã học viên: Đào Xuân Tùng / 2A202602177
+Object J01 (a/b/c/d theo docs/cases.md) / track ID trong task J01: J01-d (chữ số cuối 7; frame neo 65, ROI [1469, 833, 1826, 1071] trên image_1) / track_id 0
+Phiên bản CVAT / overlay đã bật (có/không): CVAT local v2.74.1 / có, overlay offline bằng src/cvat3d_fusion.py overlay (calib-diagnostic.json, CAM_P_F); overlay trong CVAT [XÁC NHẬN có/không]
+
+PHẠM VI GÁN NHÃN
+Gán nhãn CHỈ 1 PHƯƠNG TIỆN, không gán toàn bộ phương tiện trong cảnh.
+- Task J01, label "vehicles", 1 track (track_id 0), frame 0–65 (66/66 frame), 42 keyframe + 24 frame nội suy.
+- Vị trí: xe ở làn bên trái ego, đầu xe ngược hướng ego. Track bắt đầu ở cự ly ~17 m (frame 0) rồi lùi dần về phía sau ego, xa nhất ~55 m (frame 43).
+- Self-check khi lập phiếu: track 0 KHÔNG phải xe J01-d. Ở frame 65, xe J01-d nằm trong ROI, cách ~15 m về phía trước bên phải ego. Track 0 ở frame 65 nằm phía sau bên trái, cách ~52 m, và ngoài FOV camera trước trong cả 66 frame. Chi tiết ở mục CAMERA–LIDAR.
 
 J01 — TRACK LÕI
-Frame fit và lý do:
-L / W / H (m):
+Frame fit và lý do: frame 0 (keyframe đầu). Cự ly ~17 m, ~2.400 điểm trong box. Cụm điểm thấy rõ cả chiều dài thân xe (~4,7 m) và nóc, tách rời khỏi object khác. Frame 1–4 và 8–12 cũng dày tương tự (2.000–2.600 điểm) và xác nhận cùng kích thước.
+L / W / H (m): 4,85 / 1,84 / 1,36. Giữ nguyên ở 65/66 frame; riêng keyframe 40 bị lệch (xem mục SELF-QC). So với điểm thật: phần điểm nhìn thấy dài ~4,7–4,8 m, cao ~1,35 m. Bề ngang chỉ hiện ~1,67 m vì LiDAR thấy một mặt hông xe, nên W = 1,84 m giữ theo kích thước vật rắn của xe con, không co theo cụm điểm.
 Keyframe quan trọng và lý do:
-Đã bấm F qua đủ frame 0–65 (có/không):
+- 0: bắt đầu track, frame fit kích thước.
+- 7, 13, 19, 25, 31, 33, 34: các mốc đổi heading theo quỹ đạo cong nhẹ. Yaw đổi dần −173° → −177,6° → 179,3° → 173,6° → 167,9° → 165,0° → 159,9° → 164,4°, bước lớn nhất 5,7°.
+- 5, 7, 22, 24: chặn hai bên đoạn bị che khuất (frame 6 và 23 là frame nội suy).
+- 43: mốc xa nhất còn evidence (~55 m, ~75 điểm).
+- 50: keyframe cuối, nhưng không có evidence (xem mục "Đoạn thưa" bên dưới).
+Đã bấm F qua đủ frame 0–65 (có/không): [XÁC NHẬN]. Export có đủ 66/66 frame, kể cả frame nội suy.
 Đoạn thưa / che khuất / dễ nhầm identity:
+- Frame 5–7: bị che. Ở frame 5 chỉ thấy ~1,2 m thân xe, frame 6 không còn điểm nào, frame 7 thấy ~2,6 m. Có vật cản trên tia nhìn ở làn gần ego hơn. Đã giữ identity và kích thước, đúng hướng xử lý. Tuy nhiên chưa bật thuộc tính occluded (export: occluded = false ở cả 66 frame).
+- Frame 22–24: thưa/che một phần. Frame 23 (nội suy) không có điểm trong box; frame 22 và 24 chỉ có 200–300 điểm. Giữ track, chưa bật occluded.
+- Frame 34–43: điểm thưa dần theo cự ly 43 → 55 m (≤ 220 điểm, frame 38 chỉ 48 điểm). Kích thước được giữ đúng 4,85 × 1,84 × 1,36, trừ frame 40.
+- Frame 44–50: nghi mất bám. Ở frame 36–43, tâm box đi ra xa đều ~1,6 m/frame; sang frame 44–50 lại đi ngược lại, gần ego hơn ~0,5 m/frame. Đổi chiều đột ngột như vậy là không hợp lý về vật lý. Keyframe 50 chỉ có 2 điểm trong box. Theo quỹ đạo ngoại suy, xe lúc này ở ngoài 57 m và gần như không còn điểm.
+- Frame 51–65: sau keyframe 50 không còn keyframe nên box đứng yên, có 0–2 điểm trong box. Không có evidence xe còn ở vị trí đó.
 
 SELF-QC (từ qc_tracks.csv / qc_flags.csv)
-Lần QC đầu — cờ của track J01 (loại, frame):
+Lệnh chạy: python3 src/cvat3d_fusion.py qc --annotations outputs/j01 --out submission/qc-j01
+qc_tracks.csv: track 0 có n_frames 66, n_keyframes 42, frame 0–65, n_gaps 0. L_drift 0,0577, W_drift 0,0054, H_drift 0. yaw_step_max 5,73°, pos_step_max 1,91 m, range 16,2–55,4 m.
+Lần QC đầu — cờ của track J01 (loại, frame): 1 cờ, dimension_drift (L: 4,57..4,85 m, 5,8% > 5%). CSV ghi frame 0 (frame có L lớn nhất), nhưng frame lệch thật là keyframe 40: L 4,57 m, W 1,83 m.
 Quyết định cho từng cờ (sửa / giữ vì hợp lệ / chưa đủ evidence) và lý do:
-Đã sửa gì sau QC đầu; QC cuối còn cờ nào:
-Nhận xét của bạn cùng cặp và bạn đồng ý/không đồng ý vì sao:
+- dimension_drift @40: SỬA. Xe là vật rắn, kích thước đã xác lập ở frame 0. Frame 40 cách ~51 m, chỉ ~100 điểm, nhiều khả năng đã kéo nhầm cạnh khi dời tâm. Cần trả keyframe 40 về 4,85 × 1,84 × 1,36.
+Các vấn đề script không gắn cờ (tự rà theo frame):
+- Frame 44–65, mất evidence: CHƯA ĐỦ EVIDENCE để giữ track. Hướng xử lý: bật outside từ frame 44 (frame ngay sau mốc cuối còn cụm điểm). Không nối track sang cụm điểm khác khi chưa chắc cùng xe.
+- Frame 5–7, 22–24, che khuất: GIỮ track và kích thước. Bổ sung occluded = true ở các frame bị che.
+Đã sửa gì sau QC đầu; QC cuối còn cờ nào: Chưa rework. day14.zip là export duy nhất (03/10/2026 21:11), nên QC cuối trùng QC đầu: còn 1 cờ dimension_drift @40.
+Nhận xét của bạn cùng cặp và bạn đồng ý/không đồng ý vì sao: [XÁC NHẬN]
 
 CAMERA–LIDAR (overlay trên image_1)
-Ca bình thường (frame / quan sát):
-Ca khó (frame / quan sát 2D / quan sát 3D):
-Giả thuyết nguyên nhân (annotation / FOV / occlusion / sparse / nghi calibration / chưa đủ evidence):
-Hành động (sửa / giữ / báo Lab Coach) và lý do:
+Chiếu track 0 bằng overlay offline (src/cvat3d_fusion.py overlay, private/calib-diagnostic.json, CAM_P_F 1920 × 1536). Đã render ảnh cho frame 0, 2, 23, 43, 50, 65 và tính phép chiếu cho cả 66 frame. Kết quả: box out_of_fov ở 66/66 frame, không có bbox2d.
+- Frame 0: cả 8 góc box nằm trước camera nhưng không góc nào rơi vào khung ảnh, tức xe ở ngang bên trái ego, ngoài góc nhìn ngang của camera trước.
+- Từ frame 3: box ở phía sau camera (độ sâu âm).
+Vì vậy overlay không vẽ được track này ở frame nào.
+Ca bình thường (frame / quan sát): Không có cho track 0 (không frame nào nằm trong image_1).
+Ca khó (frame / quan sát 2D / quan sát 3D): Frame 0. 2D: image_1 không thấy xe, overlay không vẽ cuboid. 3D: cụm ~2.400 điểm rõ ràng, cuboid bao trọn thân xe ở ~17 m bên trái.
+Giả thuyết nguyên nhân (annotation / FOV / occlusion / sparse / nghi calibration / chưa đủ evidence): FOV. Xe nằm ngoài vùng nhìn của camera trước, không phải lỗi calibration. Camera trước không thấy xe không có nghĩa là xe không tồn tại.
+Hành động (sửa / giữ / báo Lab Coach) và lý do: GIỮ cuboid track 0 ở frame 0–43, vì evidence 3D đủ và lệch 2D là do FOV.
+Đối chiếu ROI J01-d tại frame neo 65: trong ROI có cụm ~2.900 điểm, cách ~15 m về phía trước bên phải ego. Track 0 không có mặt ở đó. Nguyên nhân: annotation (chọn sai object J01). Hành động: SỬA, tạo track mới cho xe J01-d bắt đầu từ frame 65 và mở rộng ra toàn đoạn xe có mặt. Kiểm đầu–đuôi bằng overlay trên image_1.
 
 CASE NGẮN (task practice)
-Case → track ID (ví dụ B01 → 3):
-Case đã xong:
-Case đang dở / chỗ kẹt:
-fragmentation_suspect ở đầu/cuối case đã kiểm là do cách cắt case (có/không):
+Case → track ID (ví dụ B01 → 3): Không có trong bài nộp. Chỉ có export task J01, nên không có submission/qc-practice/.
+Case đã xong: Không có trong bài nộp.
+Case đang dở / chỗ kẹt: Không có trong bài nộp.
+fragmentation_suspect ở đầu/cuối case đã kiểm là do cách cắt case (có/không): Không áp dụng. Track J01 phủ 0–65 nên QC không báo fragmentation_suspect.
 
 THỜI GIAN
-J01 / case ngắn / QC và fusion:
+J01 / case ngắn / QC và fusion: [XÁC NHẬN]
