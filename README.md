@@ -20,7 +20,13 @@ Bài cá nhân **4 giờ**: hoàn thiện một track 3D dài trên CVAT, tự Q
    ```
 
    Windows PowerShell: `Expand-Archive $HOME\Downloads\day14-coach-data-pack.zip -DestinationPath .` (hoặc chuột phải file zip → Extract All, chọn thư mục repo).
-4. Mở job Day 14 Lab Coach giao và object mục tiêu. Đọc [bài lab](docs/lab.md) từ đầu.
+4. Tạo task 3D trên CVAT local từ file `day14-vinfast-cvat-upload.zip` Lab Coach phát (66 frame, point cloud + 8 ảnh camera mỗi frame; **không giải nén**):
+   1. Mở `http://localhost:8080` → **Tasks** → **+** → **Create a new task**.
+   2. Name: `Day14 <tên bạn>`. Labels: **Add label** → `vehicles` (kiểu Cuboid hoặc Any) → **Continue**.
+   3. **Select files** → **My computer** → kéo file `day14-vinfast-cvat-upload.zip` vào. Để mặc định các mục khác (frame step 1).
+   4. **Submit & Open**, đợi task xử lý xong (vài phút), mở job. Workspace phải là **Standard 3D**, panel phải có ảnh `image_0`…`image_7`.
+
+   Rồi chọn object mục tiêu Lab Coach giao và đọc [bài lab](docs/lab.md) từ đầu.
 5. Bật overlay nếu muốn xem cuboid trên ảnh camera trước. Chạy từ thư mục gốc repo:
 
    | Máy | Lệnh |
