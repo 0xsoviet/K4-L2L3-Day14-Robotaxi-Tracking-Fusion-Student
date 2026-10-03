@@ -5,8 +5,44 @@ Bật một plugin trong CVAT local đang chạy trên máy: khi mở job 3D c�
 ## Cần có
 
 - CVAT local đã cài ở Day 2 (v2.74.1) đang chạy, container giao diện tên `cvat_ui` (tên mặc định của compose CVAT). Thư mục compose nằm ở đâu cũng được.
-- `bash`, `docker`, `python3` (chỉ thư viện chuẩn) và `curl`. macOS/Ubuntu dùng cửa sổ lệnh thường; Windows chạy trong Ubuntu (WSL) như lúc cài CVAT.
+- `bash`, `docker`, `python3` (chỉ thư viện chuẩn) và `curl`. macOS/Ubuntu dùng cửa sổ lệnh thường; Windows làm theo mục [Windows](#windows-chạy-trong-ubuntu-wsl) bên dưới.
 - Clone repo này. Lệnh dưới chạy từ thư mục gốc repo.
+- Gói dữ liệu Lab Coach phát (`day14-coach-data-pack.zip`): giải nén ở thư mục gốc repo để có `private/calib-diagnostic.json` và `private/frame-maps/`. Thiếu gói này `up` báo lỗi không tìm thấy calibration.
+
+## Windows: chạy trong Ubuntu (WSL)
+
+Không chạy script trong PowerShell, CMD hay Git Bash: script cần `bash` và `python3` của Linux. Dùng lại Ubuntu (WSL) và Docker Desktop đã cài ở Day 2.
+
+1. Mở Docker Desktop, đợi CVAT chạy (mở được `http://localhost:8080`). Trong Docker Desktop → Settings → Resources → WSL integration, bật cho Ubuntu.
+2. Mở **Ubuntu** từ Start menu (không phải PowerShell). Kiểm tra:
+
+   ```bash
+   docker ps --format '{{.Names}}' | grep cvat_ui
+   python3 --version
+   ```
+
+   Dòng đầu phải in `cvat_ui`. Thiếu công cụ thì cài: `sudo apt update && sudo apt install -y git unzip curl python3`.
+3. Clone repo **trong Ubuntu**, ở thư mục nhà, rồi giải nén gói dữ liệu. File tải về trên Windows nằm ở `/mnt/c/Users/<tên-user-Windows>/Downloads/`:
+
+   ```bash
+   cd ~
+   git clone https://github.com/VinUni-AI20k/K4-L2L3-Day14-Robotaxi-Tracking-Fusion-Student.git
+   cd K4-L2L3-Day14-Robotaxi-Tracking-Fusion-Student
+   unzip /mnt/c/Users/<tên-user-Windows>/Downloads/day14-coach-data-pack.zip
+   bash scripts/cvat-overlay/overlay.sh up
+   ```
+
+4. Tải lại tab CVAT trên trình duyệt Windows bằng Ctrl+Shift+R.
+
+Lỗi hay gặp trên Windows:
+
+| Thông báo | Cách xử lý |
+| --- | --- |
+| `$'\r': command not found` | Repo được clone bằng Git của Windows nên file có xuống dòng CRLF. Clone lại trong Ubuntu như bước 3. |
+| `docker not found` / `cannot reach Docker` | Docker Desktop chưa chạy hoặc chưa bật WSL integration cho Ubuntu (bước 1). |
+| `container cvat_ui is not running` | CVAT chưa bật: mở Docker Desktop, start nhóm container CVAT. |
+| `python3 not found` | `sudo apt install -y python3` |
+| Lỗi không tìm thấy `private/calib-diagnostic.json` | Chưa giải nén gói dữ liệu ở thư mục gốc repo. |
 
 ## Bật, kiểm, tắt
 
